@@ -3,6 +3,8 @@ import logging
 from urllib.parse import urlparse
 import pandas as pd 
 import hashlib
+import nltk
+from nltk.corpus import stopwords
 
 logging.basicConfig(level = logging.INFO)
 logger = logging.getLogger(__name__)
@@ -10,6 +12,8 @@ logger = logging.getLogger(__name__)
 def main(filename):
     logger.info('Begining the cleaning process')
     df = _read_data(filename)
+
+    #Cleaning the dataframe 
     newspaper_uid = _extract_newspaper_uid(filename)
     df = _add_newspaper_uid_column(df, newspaper_uid)
     df = _extract_host(df)
@@ -17,6 +21,8 @@ def main(filename):
     df = _generate_uids_for_rows(df)
     df = _remove_newline_for_body(df)
 
+    #Adding new info
+    df = _add_tokens(df)
     return df
 
 def _read_data(filename):
@@ -47,7 +53,7 @@ def _fill_missing_titles(df):
                     .applymap(lambda title: title.split('-'))
                     .applymap(lambda words_list: ' '.join(words_list)))
     
-    df[missing_titles_mask]['title'] = missing_titles['missing_titles']
+    df.loc[missing_titles_mask, ['title']] = missing_titles['missing_titles']
 
     return df
 
@@ -65,18 +71,24 @@ def _remove_newline_for_body(df):
     df['body'] = stripped_body
     return df
 
+def _add_tokens(df):
+    logger.info('Counting the number of stop words in specific columns')
+    #stop words are the words differents of articles
+    stop_words = set(stopwords.words('spanish'))
+    columns_to_tokenize = ['title', 'body']
+    for column in columns_to_tokenize:
+        df['n_tokens_{}'.format(column)] = _tokenizer(df, column, stop_words)
+   
 
+    return df
 
-
-
-
-
-
-
-
-
-
- 
+def _tokenizer(df, column, stop_words):
+    return (df.dropna()
+    .apply(lambda row: nltk.word_tokenize(row[column]), axis = 1)               #Convert the strings to tokens
+    .apply(lambda tokens: list(filter(lambda token: token.isalpha(), tokens)))  #test if the token isnt nan and if is alphabetic
+    .apply(lambda tokens: list(map(lambda token: token.lower(), tokens)))       #Convert each token in lower case
+    .apply(lambda words_lists: list(filter(lambda word: word not in stop_words, words_lists))) #Confirms if the word is in the list of stopwords
+    .apply(lambda valid_word_list: len(valid_word_list)))
  
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
