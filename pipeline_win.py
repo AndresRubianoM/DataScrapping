@@ -28,7 +28,7 @@ def _tranform():
         clean_data_filename = 'clean_{}'.format(dirty_data_filename)
 
         subprocess.run(['python', 'newspaper_recipe.py', dirty_data_filename], cwd = '.\Transform') #execute the newspaper_recipe.py
-        subprocess.run(['del', '\Transform\{}'.format(dirty_data_filename)], shell = True)
+        subprocess.run(['del', '.\Transform\{}'.format(dirty_data_filename)], shell = True)
         subprocess.run(['move', '.\Transform\{}'.format(clean_data_filename), '.\load\{}.csv'.format(new_site_uid)], shell = True)
 
 
